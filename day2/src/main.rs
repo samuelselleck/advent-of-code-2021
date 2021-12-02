@@ -6,25 +6,27 @@ fn main() {
     let commands: Vec<(&str, i32)> = instructions
         .split('\n')
         .map(|s| s.split_whitespace())
-        .map(|mut itr| 
+        .map(|mut itr| {
             (
                 itr.next().expect("no command."),
-                itr.next().expect("no command argument.")
+                itr.next()
+                    .expect("no command argument.")
                     .parse()
                     .expect("argument not an integer."),
             )
-        ).collect();
+        })
+        .collect();
 
     let [mut depth, mut horiz, mut aim] = [0; 3];
-    for c in commands {
-        match c {
-            ("down", x) => aim += x,
-            ("up", x) => aim -= x,
-            ("forward", x) => {
-                horiz += x;
-                depth += aim * x;
+    for (cmd, arg) in commands {
+        match cmd {
+            "down" => aim += arg,
+            "up" => aim -= arg,
+            "forward" => {
+                horiz += arg;
+                depth += aim * arg;
             }
-            t => panic!("unknown command: {}", t.0),
+            cmd => panic!("unknown command: {}", cmd),
         }
     }
 
