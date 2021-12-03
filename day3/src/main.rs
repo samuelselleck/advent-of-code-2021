@@ -64,13 +64,13 @@ where
     let mut candidates: Vec<_> = (0..report.len()).collect();
     for i in 0..report[0].len() {
         let mut count = 0;
-        for r in &candidates {
-            count += report[*r][i]
+        for &r in &candidates {
+            count += report[r][i]
         }
         if candidates.len() > 1 {
             candidates = candidates
                 .into_iter()
-                .filter(|r| el_filter(count, report[*r][i]))
+                .filter(|&r| el_filter(count, report[r][i]))
                 .collect();
         } else {
             break;
