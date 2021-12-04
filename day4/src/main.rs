@@ -6,6 +6,7 @@ struct BingoBoard {
     els: HashMap<u8, (usize, usize)>,
     col_counts: [u8; 5],
     row_counts: [u8; 5],
+    won: bool,
 }
 
 impl BingoBoard {
@@ -14,6 +15,7 @@ impl BingoBoard {
             els,
             col_counts: [0; 5],
             row_counts: [0; 5],
+            won: false,
         }
     }
 
@@ -21,7 +23,8 @@ impl BingoBoard {
         self.els.remove(&guess).and_then(|(r, c)| {
             self.col_counts[c] += 1;
             self.row_counts[r] += 1;
-            if self.col_counts[c] == 5 || self.row_counts[r] == 5 {
+            if !self.won && (self.col_counts[c] == 5 || self.row_counts[r] == 5) {
+                self.won = true;
                 Some(self.score(guess))
             } else {
                 None
@@ -37,16 +40,15 @@ impl BingoBoard {
 fn main() {
     let bingo_info = fs::read_to_string("bingo.txt").expect("file not found.");
     let mut lines = bingo_info.split('\n');
-
     let guesses: Vec<_> = lines
         .next()
         .unwrap()
         .split(',')
-        .map(|c| c.parse::<u8>().unwrap())
+        .map(|c| c.trim().parse::<u8>().unwrap())
         .collect();
 
-    let boards: Vec<BingoBoard> = lines
-        .filter(|&l| l != "")
+    let mut boards: Vec<BingoBoard> = lines
+        .filter(|&l| l.trim() != "")
         .collect::<Vec<_>>()
         .chunks(5)
         .map(|board_str| {
@@ -57,7 +59,7 @@ fn main() {
                     .map(|(i, l)| {
                         l.split_whitespace()
                             .enumerate()
-                            .map(|(j, c)| (c.parse().unwrap(), (i, j)))
+                            .map(move |(j, c)| (c.trim().parse().unwrap(), (i, j)))
                     })
                     .flatten()
                     .collect(),
@@ -65,24 +67,20 @@ fn main() {
         })
         .collect();
 
-    //Part 1
+    let events: Vec<u32> = guesses
+        .iter()
+        .map(|&g| {
+            boards
+                .iter_mut()
+                .filter_map(|b| b.mark(g))
+                .collect::<Vec<_>>()
+        })
+        .flatten()
+        .collect();
 
-    for &guess in &guesses {
-        
-    }
-
-    //Part 2
-    let mut guessed: HashSet<u8> = HashSet::new();
-    let mut prev_lost = &boards[2];
-    for &guess in &guesses {
-        guessed.insert(guess);
-        let lost = boards.iter().filter(|b| !b.has_won(&guessed)).next();
-        match lost {
-            Some(board) => prev_lost = board,
-            None => {
-                println!("last winning score: {}", prev_lost.score(&guessed, guess));
-                break;
-            }
-        }
-    }
+    println!(
+        "first winner score: {}, last winner score: {}",
+        events.first().unwrap(),
+        events.last().unwrap()
+    )
 }
