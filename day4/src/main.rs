@@ -53,16 +53,18 @@ fn main() {
         })
         .collect();
 
+    //Part 1
     let mut guessed: HashSet<u8> = HashSet::new();
     for &guess in &guesses {
         guessed.insert(guess);
         let won = boards.iter().filter(|b| b.has_won(&guessed)).next();
         if let Some(board) = won {
-            println!("fist winning score: {}", board.score(&guessed, guess));
+            println!("first winning score: {}", board.score(&guessed, guess));
             break;
         }
     }
 
+    //Part 2
     let mut guessed: HashSet<u8> = HashSet::new();
     let mut prev_lost = &boards[2];
     for &guess in &guesses {
