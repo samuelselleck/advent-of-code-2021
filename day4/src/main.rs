@@ -1,32 +1,36 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
+
 use std::fs;
 
 struct BingoBoard {
-    els: Vec<Vec<u8>>,
+    els: HashMap<u8, (usize, usize)>,
+    col_counts: [u8; 5],
+    row_counts: [u8; 5],
 }
 
 impl BingoBoard {
-    fn has_won(&self, guessed: &HashSet<u8>) -> bool {
-        let n = self.els.len();
-        let mut candidate_rows = vec![true; n];
-        let mut candidate_cols = vec![true; n];
-        for i in 0..n {
-            for j in 0..n {
-                candidate_rows[i] = candidate_rows[i] && guessed.contains(&self.els[i][j]);
-                candidate_cols[i] = candidate_cols[i] && guessed.contains(&self.els[j][i]);
-            }
+    fn new(els: HashMap<u8, (usize, usize)>) -> BingoBoard {
+        BingoBoard {
+            els,
+            col_counts: [0; 5],
+            row_counts: [0; 5],
         }
-        return candidate_rows.iter().any(|&b| b) || candidate_cols.iter().any(|&b| b);
     }
 
-    fn score(&self, guessed: &HashSet<u8>, winning_num: u8) -> u32 {
-        self.els
-            .iter()
-            .flatten()
-            .filter(|e| !guessed.contains(e))
-            .map(|&e| e as u32)
-            .sum::<u32>()
-            * (winning_num as u32)
+    fn mark(&mut self, guess: u8) -> Option<u32> {
+        self.els.remove(&guess).and_then(|(r, c)| {
+            self.col_counts[c] += 1;
+            self.row_counts[r] += 1;
+            if self.col_counts[c] == 5 || self.row_counts[r] == 5 {
+                Some(self.score(guess))
+            } else {
+                None
+            }
+        })
+    }
+
+    fn score(&self, winning_num: u8) -> u32 {
+        self.els.keys().map(|&e| e as u32).sum::<u32>() * (winning_num as u32)
     }
 }
 
@@ -45,23 +49,26 @@ fn main() {
         .filter(|&l| l != "")
         .collect::<Vec<_>>()
         .chunks(5)
-        .map(|board_str| BingoBoard {
-            els: board_str
-                .iter()
-                .map(|l| l.split_whitespace().map(|c| c.parse().unwrap()).collect())
-                .collect(),
+        .map(|board_str| {
+            BingoBoard::new(
+                board_str
+                    .iter()
+                    .enumerate()
+                    .map(|(i, l)| {
+                        l.split_whitespace()
+                            .enumerate()
+                            .map(|(j, c)| (c.parse().unwrap(), (i, j)))
+                    })
+                    .flatten()
+                    .collect(),
+            )
         })
         .collect();
 
     //Part 1
-    let mut guessed: HashSet<u8> = HashSet::new();
+
     for &guess in &guesses {
-        guessed.insert(guess);
-        let won = boards.iter().filter(|b| b.has_won(&guessed)).next();
-        if let Some(board) = won {
-            println!("first winning score: {}", board.score(&guessed, guess));
-            break;
-        }
+        
     }
 
     //Part 2
