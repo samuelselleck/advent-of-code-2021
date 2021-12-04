@@ -36,7 +36,7 @@ fn main() {
     let oxygen_gen = arr_to_binary(find_filter_sequence(&report, |c, v| {
         c * v > 0 || (c == 0 && v > 0)
     }));
-    let co2_rating = arr_to_binary(find_filter_sequence(&report, |c, v| {
+    let co2_rating = arr_to_binary(find_filter_sequence(&report, &|c, v| {
         c * v < 0 || (c == 0 && v < 0)
     }));
 
@@ -68,10 +68,7 @@ where
             count += report[r][i]
         }
         if candidates.len() > 1 {
-            candidates = candidates
-                .into_iter()
-                .filter(|&r| el_filter(count, report[r][i]))
-                .collect();
+            candidates.retain(|&r| el_filter(count, report[r][i]));
         } else {
             break;
         }

@@ -15,7 +15,7 @@ fn main() {
             )
         });
 
-    let [mut depth, mut horiz, mut aim] = [0; 3];
+    let [mut depth, mut horiz, mut aim] = [0;3];
     for (cmd, arg) in commands {
         match cmd {
             "down" => aim += arg,
@@ -24,7 +24,7 @@ fn main() {
                 horiz += arg;
                 depth += aim * arg;
             }
-            cmd => panic!("unknown command: {}", cmd),
+            _ => panic!("unknown command: {}", cmd),
         }
     }
 
