@@ -32,7 +32,6 @@ fn main() {
                 .map(|mut o| (o.next().unwrap(), o.next().unwrap()))
         })
         .map(|mut o| (o.next().unwrap(), o.next().unwrap()))
-        //.filter(|(p1, p2)| p1.0 == p2.0 || p1.1 == p2.1)
         .map(|(p1, p2)| (p1, (p2.0 - p1.0, p2.1 - p1.1)))
         .map(|(p1, v)| {
             (0..=samples)
@@ -42,5 +41,5 @@ fn main() {
         .flatten()
         .count_duplicates();
 
-    println!("duplicates: {:?}", duplicates)
+    println!("duplicates: {}", duplicates)
 }
