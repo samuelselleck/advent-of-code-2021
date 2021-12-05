@@ -27,7 +27,7 @@ fn main() {
         l.split("->")
             .map(|p| p.split(',').map(|c| c.trim().parse::<u32>().unwrap()))
             .map(|mut o| (o.next().unwrap(), o.next().unwrap()))
-            .map(|(p1, p2)| p1 + p2) //TODO make this unwrap to all points between
+            .flat_map(|(p1, p2)| [p1, p2]) //TODO make this unwrap to all points between
     }).count_duplicates();
 
     println!("duplicates: {:?}", duplicates)
