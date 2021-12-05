@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::hash::Hash;
 
@@ -22,13 +23,24 @@ where
 
 fn main() {
     let vents = fs::read_to_string("vents.txt").expect("file not found.");
-
-    let duplicates = vents.split('\n').flat_map(|l| {
-        l.split("->")
-            .map(|p| p.split(',').map(|c| c.trim().parse::<u32>().unwrap()))
-            .map(|mut o| (o.next().unwrap(), o.next().unwrap()))
-            .flat_map(|(p1, p2)| [p1, p2]) //TODO make this unwrap to all points between
-    }).count_duplicates();
+    let samples = 1000;
+    let duplicates = vents
+        .split('\n')
+        .map(|l| {
+            l.split("->")
+                .map(|p| p.split(',').map(|c| c.trim().parse::<i32>().unwrap()))
+                .map(|mut o| (o.next().unwrap(), o.next().unwrap()))
+        })
+        .map(|mut o| (o.next().unwrap(), o.next().unwrap()))
+        //.filter(|(p1, p2)| p1.0 == p2.0 || p1.1 == p2.1)
+        .map(|(p1, p2)| (p1, (p2.0 - p1.0, p2.1 - p1.1)))
+        .map(|(p1, v)| {
+            (0..=samples)
+                .map(|n| (p1.0 + n * v.0 / samples, p1.1 + n * v.1 / samples))
+                .collect::<HashSet<(i32, i32)>>()
+        })
+        .flatten()
+        .count_duplicates();
 
     println!("duplicates: {:?}", duplicates)
 }
