@@ -1,6 +1,6 @@
 use std::fs;
 
-fn main() { 
+fn main() {
     const TOTAL_NBR_DAYS: u32 = 256;
     const BASE_TIMER: usize = 6;
     const EXTRA: usize = 2;
@@ -10,8 +10,8 @@ fn main() {
         .split(',')
         .map(|s| s.parse().expect("not a number."))
         .collect();
-    
-    let mut states = [0u128;BASE_TIMER + EXTRA + 1];
+
+    let mut states = [0u128; BASE_TIMER + EXTRA + 1];
     for f in fish {
         states[f] += 1;
     }
@@ -28,4 +28,3 @@ fn main() {
     let total: u128 = states.iter().sum();
     println!("total fish: {}", total);
 }
-
