@@ -65,7 +65,6 @@ fn main() {
         basins.push(visited.len());
     }
 
-    basins.sort();
-    let prod = basins.iter().rev().take(3).fold(1, |p, v| p*v);
-    println!("mult: {}", prod);
+    basins.sort_by(|u, v| v.cmp(u));
+    println!("mult: {}", basins[0]*basins[1]*basins[2]);
 }
