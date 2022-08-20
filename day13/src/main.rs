@@ -2,7 +2,7 @@ use std::fs;
 use std::collections::HashSet;
 
 fn main() {
-    let origami = fs::read_to_string("origami.txt").expect("file not found");
+    let origami = fs::read_to_string("extreme.txt").expect("file not found");
 
     let mut itr = origami.lines();
 

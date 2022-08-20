@@ -1,5 +1,6 @@
 use std::fs;
 use std::collections::HashSet;
+
 struct SquidSquad {
     energies: Vec<Vec<u8>>,
     dims: (i32, i32),

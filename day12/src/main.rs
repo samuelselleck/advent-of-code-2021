@@ -1,5 +1,7 @@
 use std::fs;
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
+
 
 fn main() {
     
@@ -13,11 +15,13 @@ fn main() {
         graph.entry(c2).or_insert_with(Vec::new).push(c1);
     }
 
-    let n = nbr_paths("start", &graph, &HashSet::from_iter(["start"]), false);
-    println!("paths: {}", n);
+    let timer = Instant::now();
+    let n = nbr_paths("start", &graph, &mut HashSet::from_iter(["start"]), false);
+    let dur = timer.elapsed();
+    println!("paths: {} in {:?}", n, dur);
 }
 
-fn nbr_paths(curr: &str, graph: &HashMap<&str, Vec<&str>>, already_visited: &HashSet<&str>, multvisit: bool) -> u32 {
+fn nbr_paths<'a>(curr: &str, graph: &HashMap<&'a str, Vec<&'a str>>, already_visited: &mut HashSet<&'a str>, multvisit: bool) -> u32 {
     if curr == "end" {
         return 1;
     }
@@ -28,12 +32,12 @@ fn nbr_paths(curr: &str, graph: &HashMap<&str, Vec<&str>>, already_visited: &Has
         if n == n.to_lowercase() {
             if already_visited.contains(n) {
                 if n != "start" {
-                    total += nbr_paths(n, graph, &already_visited, true);
+                    total += nbr_paths(n, graph, already_visited, true);
                 }
             } else {
-                let mut visited = already_visited.clone();
-                visited.insert(n);
-                total += nbr_paths(n, graph, &visited, multvisit);
+                already_visited.insert(n);
+                total += nbr_paths(n, graph, already_visited, multvisit);
+                already_visited.remove(n);
             }
         } else {
             total += nbr_paths(n, graph, already_visited, multvisit);
