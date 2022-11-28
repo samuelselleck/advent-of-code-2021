@@ -1,148 +1,168 @@
-use std::{fmt::Display, fs, ops::Add};
+use std::{fmt::Display, fs};
 
 fn main() {
-    let input = fs::read_to_string("test.txt").expect("file not found");
-    let numbers: Vec<_> = input
-        .lines()
-        .map(|s| SnailNumber::parse_from_str(s))
-        .collect();
-    let sum = numbers.into_iter().fold(None, |a, e| match a {
-            None => Some(e),
-            Some(a) => Some(a + e),
-        }).unwrap();
-    //[[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]]
+    let input = fs::read_to_string("numbers.txt").expect("file not found");
+    let numbers: Vec<_> = input.lines().map(|s| SnailNumber::parse(s)).collect();
 
-    //TODO: need to let numbers be changed further to the left/right
-    println!("{}", sum);
+    let mut m = 0;
+    for i in 0..numbers.len() {
+        for j in (i + 1)..numbers.len() {
+            let (a, b) = (&numbers[i], &numbers[j]);
+            let r = a.add(b).magnitude();
+            let l = b.add(a).magnitude();
+            m = m.max(r);
+            m = m.max(l);
+        }
+    }
+    println!("{}", m);
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SnailToken {
+    LeftBracket,
+    RightBracket,
+    Number(u32),
 }
 
 #[derive(Debug, Clone)]
-enum SnailNumber {
-    Pair(Box<(SnailNumber, SnailNumber)>),
-    Literal(u32),
+struct SnailNumber {
+    tokens: Vec<SnailToken>,
 }
 
 impl SnailNumber {
-    fn parse_from_str(str: &str) -> Self {
-        Self::parse(&mut str.chars())
-    }
-
-    fn parse(str: &mut impl Iterator<Item = char>) -> Self {
-        let tok = str.next().unwrap();
-        if tok == '[' {
-            let left = Self::parse(str);
-            str.next(); // skip ,
-            let right = Self::parse(str);
-            str.next(); // skip ]
-            Self::Pair(Box::new((left, right)))
-        } else {
-            let num = tok.to_digit(10).unwrap();
-            Self::Literal(num)
+    fn parse(s: &str) -> Self {
+        Self {
+            tokens: s
+                .chars()
+                .flat_map(|c| match c {
+                    '[' => Some(SnailToken::LeftBracket),
+                    ']' => Some(SnailToken::RightBracket),
+                    ',' => None,
+                    n => Some(SnailToken::Number(n.to_digit(10).unwrap())),
+                })
+                .collect(),
         }
     }
 
-    fn add(self, other: Self) -> Self {
-        let mut num = Self::Pair(Box::new((self, other)));
-        num.reduce();
-        num
+    fn add(&self, other: &Self) -> Self {
+        let mut new_toks = self.tokens.clone();
+        new_toks.insert(0, SnailToken::LeftBracket);
+        new_toks.extend(other.tokens.clone());
+        new_toks.push(SnailToken::RightBracket);
+        let mut res = Self { tokens: new_toks };
+        res.reduce();
+        res
     }
 
     fn reduce(&mut self) {
-        println!("{}", self);
-        loop {
-            if self.explode(0) {
-                println!("Exploded to: {}", self);
-                continue;
+        while self.explode() || self.split() {}
+    }
+
+    fn explode(&mut self) -> bool {
+        let ind = self.find_leftmost_explosion_pair_ind();
+        match ind {
+            None => false,
+            Some(i) => {
+                let e: Vec<_> = self
+                    .tokens
+                    .splice(i..(i + 4), [SnailToken::Number(0)])
+                    .collect();
+                let mut explode_elem = |token, dir| {
+                    let val = match token {
+                        SnailToken::Number(n) => n,
+                        _ => panic!("not a number in explode"),
+                    };
+                    let mut i = i as i32 + dir;
+                    while let Some(t) = self.tokens.get_mut(i as usize) {
+                        match t {
+                            SnailToken::Number(n) => {
+                                *n += val;
+                                return true;
+                            }
+                            _ => (),
+                        }
+                        i += dir;
+                    }
+                    false
+                };
+                let l = explode_elem(e[1], -1);
+                let r = explode_elem(e[2], 1);
+                l || r
             }
-            if self.split() {
-                println!("Split to: {}", self);
-                continue;
-            }
-            break;
         }
     }
 
-    fn explode(&mut self, lvl: i32) -> bool {
-        match self {
-            Self::Pair(p) => {
-                if lvl == 3 {
-                    return match p.as_ref() {
-                        (Self::Pair(_), Self::Pair(_)) => {
-                            *self = Self::Pair(Box::new((Self::Literal(0), Self::Literal(0))));
-                            true
-                        }
-                        (Self::Pair(pi), Self::Literal(n)) => {
-                            let (_, r) = match pi.as_ref() {
-                                (Self::Literal(l), Self::Literal(r)) => (l, r),
-                                _ => panic!("Should not contain Pairs"),
-                            };
-                            *self = Self::Pair(Box::new((Self::Literal(0), Self::Literal(n + r))));
-                            true
-                        }
-                        (Self::Literal(n), Self::Pair(pi)) => {
-                            let (l, _) = match pi.as_ref() {
-                                (Self::Literal(l), Self::Literal(r)) => (l, r),
-                                _ => panic!("Should not contain Pairs"),
-                            };
-                            *self = Self::Pair(Box::new((Self::Literal(l + n), Self::Literal(0))));
-                            true
-                        }
-                        (Self::Literal(_), Self::Literal(_)) => false,
-                    };
+    fn find_leftmost_explosion_pair_ind(&self) -> Option<usize> {
+        let mut depth = 0;
+        for i in 0..self.tokens.len() {
+            match self.tokens[i] {
+                SnailToken::LeftBracket => {
+                    if depth >= 4 {
+                        return Some(i);
+                    } else {
+                        depth += 1;
+                    }
                 }
-                let (l, r) = p.as_mut();
-                l.explode(lvl + 1) || r.explode(lvl + 1)
+                SnailToken::RightBracket => depth -= 1,
+                SnailToken::Number(_) => (),
             }
-            Self::Literal(_) => false,
-            //[[[[0,7],4],[[7,8],[6,0]]],[8,1]]
         }
+        None
     }
 
     fn split(&mut self) -> bool {
-        match self {
-            Self::Literal(n) => {
-                let n = *n;
-                if n >= 10 {
-                    *self =
-                        Self::Pair(Box::new((Self::Literal(n / 2), Self::Literal((n + 1) / 2))));
-                    true
-                } else {
-                    false
+        for i in 0..self.tokens.len() {
+            match self.tokens[i] {
+                SnailToken::Number(n) => {
+                    if n >= 10 {
+                        self.tokens.splice(
+                            i..=i,
+                            [
+                                SnailToken::LeftBracket,
+                                SnailToken::Number(n / 2),
+                                SnailToken::Number((n + 1) / 2),
+                                SnailToken::RightBracket,
+                            ],
+                        );
+                        return true;
+                    }
                 }
-            }
-            Self::Pair(p) => {
-                let (l, r) = p.as_mut();
-                l.split() || r.split()
+                _ => (),
             }
         }
+        false
     }
-}
 
-impl Add for SnailNumber {
-    type Output = Self;
+    fn magnitude(&self) -> u128 {
+        Self::mag_of_tokens(0, &self.tokens).1
+    }
 
-    fn add(self, other: Self) -> Self {
-        let parts = format!("{} + {}", self, other);
-        let res = self.add(other);
-        println!("{} = {}", parts, res);
-        res
+    fn mag_of_tokens(i: usize, tokens: &[SnailToken]) -> (usize, u128) {
+        match tokens[i] {
+            SnailToken::LeftBracket => {
+                let (i, l_mag) = Self::mag_of_tokens(i + 1, tokens);
+                let (i, r_mag) = Self::mag_of_tokens(i + 1, tokens);
+                return (i + 1, l_mag * 3 + r_mag * 2);
+            }
+            SnailToken::RightBracket => {
+                println!("{:?}", tokens[i]);
+                panic!();
+            }
+            SnailToken::Number(n) => (i, n as u128),
+        }
     }
 }
 
 impl Display for SnailNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Pair(p) => {
-                    let (l, r) = p.as_ref();
-                    format!("[{},{}]", l, r)
-                }
-                Self::Literal(n) => {
-                    n.to_string()
-                }
-            }
-        )
+        let mut s = String::new();
+        for t in &self.tokens {
+            match t {
+                SnailToken::LeftBracket => s.push('['),
+                SnailToken::RightBracket => s.push(']'),
+                SnailToken::Number(n) => s.extend(format!(" {} ", n).chars()),
+            };
+        }
+        write!(f, "{}", s)
     }
 }
